@@ -19,7 +19,7 @@ session_name('administrador_agenda_sono');
 session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']), 'samesite' => 'Lax', 'path' => '/']);
 session_start();
 $route = trim((string)($_GET['r'] ?? 'dashboard'), '/');
-if (is_ajax_request() && in_array($route, ['plan-save', 'plan-delete', 'exception-save', 'record-save'], true)) {
+if (is_ajax_request() && in_array($route, ['login', 'plan-save', 'plan-delete', 'exception-save', 'record-save'], true)) {
     set_exception_handler(static function (Throwable $error): never {
         error_log((string)$error);
         json_response(false, 'Não foi possível concluir a operação.', [], ['server' => 'unexpected'], 500);
@@ -69,7 +69,11 @@ if ($route === 'register' && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 if ($route === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     verify_csrf();
-    if ($auth->login((string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''))) redirect('dashboard');
+    if ($auth->login((string)($_POST['email'] ?? ''), (string)($_POST['password'] ?? ''))) {
+        if (is_ajax_request()) json_response(true, 'Login realizado com sucesso.', ['redirect' => url('dashboard')]);
+        redirect('dashboard');
+    }
+    if (is_ajax_request()) json_response(false, 'E-mail ou senha invÃ¡lidos.', [], ['credentials' => 'invalid'], 401);
     $error = 'E-mail ou senha inválidos.';
 }
 if (!$user && !in_array($route, ['login', 'register'], true)) redirect('login');
