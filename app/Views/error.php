@@ -1,1 +1,0 @@
-<!doctype html><html lang="pt-BR"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Agenda de Sono</title><link rel="stylesheet" href="assets/css/app.css"><body><main class="container"><section class="card"><h1>Agenda de Sono</h1><p><?= e($error) ?></p><p>Importe o script SQL pelo phpMyAdmin ou cliente MySQL.</p></section></main></body></html>

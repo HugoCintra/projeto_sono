@@ -1,6 +1,0 @@
-<?php $title=$route==='register'?'Criar conta':'Entrar'; require __DIR__.'/layout.php'; ?>
-<section class="auth card"><h1><?= e($title) ?></h1><form method="post" action="<?= e(url($route)) ?>"><input type="hidden" name="_csrf" value="<?= e(csrf_token()) ?>">
-<?php if($route==='register'): ?><label>Nome<input name="name" required maxlength="120" autocomplete="name"></label><?php endif; ?>
-<label>E-mail<input type="email" name="email" required autocomplete="email"></label><label>Senha<input type="password" name="password" required minlength="10" autocomplete="<?= $route==='register'?'new-password':'current-password' ?>"><?php if($route==='register'): ?><small>Mínimo de 10 caracteres.</small><?php endif; ?></label>
-<?php if($route==='register'): ?><label>Fuso horário<select name="timezone"><?php foreach(['America/Sao_Paulo'=>'Brasília','America/Manaus'=>'Manaus','America/Belem'=>'Belém','UTC'=>'UTC'] as $tz=>$label): ?><option value="<?= e($tz) ?>"><?= e($label) ?> (<?= e($tz) ?>)</option><?php endforeach; ?></select></label><?php endif; ?><button class="primary"><?= e($title) ?></button></form><p><?php if($route==='register'): ?>Já tem conta? <a href="<?= e(url('login')) ?>">Entrar</a><?php else: ?>Ainda não tem conta? <a href="<?= e(url('register')) ?>">Criar conta</a><?php endif; ?></p></section>
-<?php require __DIR__.'/end.php'; ?>
