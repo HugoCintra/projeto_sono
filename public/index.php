@@ -17,12 +17,19 @@ session_name('administrador_agenda_sono');
 session_set_cookie_params(['httponly' => true, 'secure' => !empty($_SERVER['HTTPS']), 'samesite' => 'Lax', 'path' => '/']);
 session_start();
 $route = trim((string)($_GET['r'] ?? 'dashboard'), '/');
+if (is_ajax_request() && in_array($route, ['plan-save', 'plan-delete', 'exception-save', 'record-save'], true)) {
+    set_exception_handler(static function (Throwable $error): never {
+        error_log((string)$error);
+        json_response(false, 'Não foi possível concluir a operação.', [], ['server' => 'unexpected'], 500);
+    });
+}
 try {
     $db = Database::connect();
     $users = new UserRepository($db);
     $auth = new AuthService($users);
     $sleep = new SleepRepository($db);
 } catch (Throwable $e) {
+    if (is_ajax_request()) json_response(false, 'Serviço temporariamente indisponível.', [], ['server' => 'unavailable'], 500);
     http_response_code(500);
     $error = 'Banco de dados indisponível. Crie o banco administrador_agenda_sono e aplique database/migrations/001_initial.sql.';
     require dirname(__DIR__) . '/app/Views/error.php';
@@ -30,6 +37,7 @@ try {
 }
 $user = $_SESSION['user'] ?? null;
 if (in_array($route, ['logout', 'plan-save', 'plan-delete', 'exception-save', 'record-save'], true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    if (is_ajax_request()) json_response(false, 'Método não permitido.', [], [], 405);
     http_response_code(405);
     exit('Método não permitido');
 }
@@ -62,16 +70,19 @@ if ($user && $route === 'plan-save') {
     $bed = (string)($_POST['bed'] ?? '');
     $wake = (string)($_POST['wake'] ?? '');
     if (!$days || array_diff($days, range(1, 7)) || !preg_match('/^\d{2}:\d{2}$/', $bed) || !preg_match('/^\d{2}:\d{2}$/', $wake)) {
+        if (is_ajax_request()) json_response(false, 'Confira horários e dias selecionados.', [], ['form' => 'invalid'], 422);
         flash('error', 'Confira horários e dias selecionados.');
         redirect('agenda');
     }
     $sleep->addPlan((int)$user['id'], $bed . ':00', $wake . ':00', $days, date('Y-m-d'));
+    if (is_ajax_request()) json_response(true, 'Planejamento adicionado.');
     flash('success', 'Planejamento adicionado.');
     redirect('agenda');
 }
 if ($user && $route === 'plan-delete') {
     verify_csrf();
     $sleep->deletePlan((int)$user['id'], (int)($_POST['id'] ?? 0));
+    if (is_ajax_request()) json_response(true, 'Planejamento removido.');
     flash('success', 'Planejamento removido.');
     redirect('agenda');
 }
@@ -82,10 +93,12 @@ if ($user && $route === 'exception-save') {
     $bed = (string)($_POST['bed'] ?? '');
     $wake = (string)($_POST['wake'] ?? '');
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || (!$cancel && (!preg_match('/^\d{2}:\d{2}$/', $bed) || !preg_match('/^\d{2}:\d{2}$/', $wake)))) {
+        if (is_ajax_request()) json_response(false, 'Confira a data e os horários da exceção.', [], ['form' => 'invalid'], 422);
         flash('error', 'Confira a data e os horários da exceção.');
         redirect('agenda');
     }
     $sleep->saveException((int)$user['id'], $date, $cancel, $cancel ? null : $bed . ':00', $cancel ? null : $wake . ':00');
+    if (is_ajax_request()) json_response(true, 'Exceção salva.');
     flash('success', 'Exceção salva.');
     redirect('agenda');
 }
@@ -99,8 +112,10 @@ if ($user && $route === 'record-save') {
         $quality = ($_POST['quality'] ?? '') === '' ? null : (int)$_POST['quality'];
         if ($quality !== null && ($quality < 1 || $quality > 5)) throw new InvalidArgumentException('Qualidade deve estar entre 1 e 5.');
         $sleep->addRecord((int)$user['id'], $start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s'), trim((string)($_POST['note'] ?? '')) ?: null, $quality);
+        if (is_ajax_request()) json_response(true, 'Registro salvo.');
         flash('success', 'Registro salvo.');
     } catch (Throwable $e) {
+        if (is_ajax_request()) json_response(false, $e instanceof InvalidArgumentException ? $e->getMessage() : 'Confira as datas e horários informados.', [], ['form' => 'invalid'], 422);
         flash('error', $e instanceof InvalidArgumentException ? $e->getMessage() : 'Confira as datas e horários informados.');
     }
     redirect('record');
