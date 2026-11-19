@@ -48,6 +48,11 @@
             }
 
             showMessage(form, result.message || 'Operação concluída.', true);
+            if (form.dataset.loginForm !== undefined) {
+                window.location.assign(result.data?.redirect || form.action);
+                return;
+            }
+
             if (form.dataset.agendaForm !== undefined) {
                 form.reset();
                 try {
